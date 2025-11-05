@@ -37,29 +37,57 @@ export const api = {
   getVoiceStatus: () => request('/api/voice/status'),
 };
 
-/** Fetch MP3 from server-side ElevenLabs proxy and play in browser. */
-export async function speakAgentLine(text, { signal } = {}) {
-  const res = await fetch('/api/voice/speak', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-    signal,
+function speakWithBrowser(text) {
+  return new Promise((resolve, reject) => {
+    const synth = window.speechSynthesis;
+    if (!synth) {
+      reject(new Error('This browser cannot play speech'));
+      return;
+    }
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 1;
+    utterance.onend = () => resolve();
+    utterance.onerror = (event) => reject(new Error(event.error || 'Browser speech failed'));
+    synth.speak(utterance);
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Voice failed (${res.status})`);
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
+}
+
+/**
+ * Play an agent line. Uses ElevenLabs when the key allows text-to-speech,
+ * otherwise the browser's speech engine so the call is still audible.
+ */
+export async function speakAgentLine(text, { signal } = {}) {
   try {
-    await new Promise((resolve, reject) => {
-      const audio = new Audio(url);
-      audio.onended = () => resolve();
-      audio.onerror = () => reject(new Error('Audio playback failed'));
-      audio.play().catch(reject);
+    const res = await fetch('/api/voice/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal,
     });
-  } finally {
-    URL.revokeObjectURL(url);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Voice failed (${res.status})`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    try {
+      await new Promise((resolve, reject) => {
+        const audio = new Audio(url);
+        audio.onended = () => resolve();
+        audio.onerror = () => reject(new Error('Audio playback failed'));
+        const started = audio.play();
+        if (started?.catch) started.catch(reject);
+      });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    return { engine: 'elevenlabs' };
+  } catch (err) {
+    if (err.name === 'AbortError') throw err;
+    await speakWithBrowser(text);
+    return { engine: 'browser', warning: err.message };
   }
 }
 

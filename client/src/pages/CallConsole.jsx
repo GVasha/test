@@ -13,6 +13,7 @@ export default function CallConsole() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [voiceReady, setVoiceReady] = useState(false);
+  const [voiceEngine, setVoiceEngine] = useState('');
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [speaking, setSpeaking] = useState(false);
   const bottomRef = useRef(null);
@@ -77,14 +78,15 @@ export default function CallConsole() {
   }
 
   async function playAgentMessage(message) {
-    if (!voiceReadyRef.current || !message?.content) return;
+    if (!message?.content) return;
     if (message.id != null) lastSpokenAgentIdRef.current = message.id;
     speakAbortRef.current?.abort();
     const controller = new AbortController();
     speakAbortRef.current = controller;
     setSpeaking(true);
     try {
-      await speakAgentLine(message.content, { signal: controller.signal });
+      const result = await speakAgentLine(message.content, { signal: controller.signal });
+      setVoiceEngine(result.engine);
     } catch (err) {
       if (err.name !== 'AbortError') {
         setError(err.message);
@@ -154,7 +156,14 @@ export default function CallConsole() {
           <h1>Call Console</h1>
           <p>
             Simulated outbound conversation driven by track branches
-            {voiceReady ? ' · ElevenLabs voice on' : ' · text only (add ELEVENLABS_API_KEY)'}.
+            {voiceEngine === 'elevenlabs'
+              ? ' · ElevenLabs voice on'
+              : voiceEngine === 'browser'
+                ? ' · browser voice (ElevenLabs key cannot use text-to-speech)'
+                : voiceReady
+                  ? ' · ElevenLabs voice on'
+                  : ' · agent lines play aloud'}
+            .
           </p>
         </div>
         <div className="row">
@@ -221,7 +230,7 @@ export default function CallConsole() {
                 <div key={m.id} className={`bubble ${m.role}`}>
                   <div className="row" style={{ justifyContent: 'space-between', gap: '0.5rem' }}>
                     <div className="who">{m.role === 'agent' ? 'Agent' : 'Borrower'}</div>
-                    {m.role === 'agent' && voiceReady && (
+                    {m.role === 'agent' && (
                       <button
                         type="button"
                         className="btn ghost small"
