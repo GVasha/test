@@ -18,13 +18,26 @@ export default function CallConsole() {
   const bottomRef = useRef(null);
   const lastSpokenAgentIdRef = useRef(null);
   const speakAbortRef = useRef(null);
+  const voiceReadyRef = useRef(false);
+  const autoSpeakRef = useRef(true);
 
   useEffect(() => {
     api
       .getVoiceStatus()
-      .then((s) => setVoiceReady(Boolean(s.configured)))
-      .catch(() => setVoiceReady(false));
+      .then((s) => {
+        const ready = Boolean(s.configured);
+        voiceReadyRef.current = ready;
+        setVoiceReady(ready);
+      })
+      .catch(() => {
+        voiceReadyRef.current = false;
+        setVoiceReady(false);
+      });
   }, []);
+
+  useEffect(() => {
+    autoSpeakRef.current = autoSpeak;
+  }, [autoSpeak]);
 
   useEffect(() => {
     api
@@ -51,8 +64,21 @@ export default function CallConsole() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [call?.messages?.length]);
 
+  function latestAgentMessage(callData) {
+    const agents = (callData?.messages || []).filter((m) => m.role === 'agent');
+    return agents[agents.length - 1] || null;
+  }
+
+  function primeAudio() {
+    const audio = new Audio(
+      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+    );
+    audio.play().catch(() => {});
+  }
+
   async function playAgentMessage(message) {
-    if (!voiceReady || !message?.content) return;
+    if (!voiceReadyRef.current || !message?.content) return;
+    if (message.id != null) lastSpokenAgentIdRef.current = message.id;
     speakAbortRef.current?.abort();
     const controller = new AbortController();
     speakAbortRef.current = controller;
@@ -68,18 +94,17 @@ export default function CallConsole() {
     }
   }
 
-  useEffect(() => {
-    if (!call?.messages?.length || !voiceReady || !autoSpeak) return;
-    const agentMessages = call.messages.filter((m) => m.role === 'agent');
-    const latest = agentMessages[agentMessages.length - 1];
-    if (!latest || latest.id === lastSpokenAgentIdRef.current) return;
-    lastSpokenAgentIdRef.current = latest.id;
-    playAgentMessage(latest);
-  }, [call?.messages, voiceReady, autoSpeak]);
+  function speakLatestAgent(callData) {
+    if (!autoSpeakRef.current) return;
+    const message = latestAgentMessage(callData);
+    if (!message || message.id === lastSpokenAgentIdRef.current) return;
+    playAgentMessage(message);
+  }
 
   useEffect(() => {
-    lastSpokenAgentIdRef.current = null;
-  }, [callId]);
+    if (!call?.messages?.length || !voiceReady || !autoSpeak) return;
+    speakLatestAgent(call);
+  }, [call, voiceReady, autoSpeak]);
 
   const canReply = call?.status === 'in_progress' && call?.current_node;
 
@@ -87,11 +112,14 @@ export default function CallConsole() {
 
   async function startNext() {
     if (!campaignId) return;
+    primeAudio();
     setBusy(true);
     setError('');
     try {
       const next = await api.startCall({ campaignId: Number(campaignId) });
+      setCall(next);
       navigate(`/call/${next.id}`);
+      speakLatestAgent(next);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -101,6 +129,7 @@ export default function CallConsole() {
 
   async function sendReply({ choiceId, replyText } = {}) {
     if (!call) return;
+    primeAudio();
     setBusy(true);
     setError('');
     try {
@@ -110,6 +139,7 @@ export default function CallConsole() {
       });
       setCall(updated);
       setReply('');
+      speakLatestAgent(updated);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -177,9 +207,11 @@ export default function CallConsole() {
                 <span
                   className={`badge ${call.status === 'completed' ? 'success' : 'warn'}`}
                 >
-                  {call.status === 'completed'
-                    ? formatOutcome(call.outcome)
-                    : 'Live simulation'}
+                  {speaking
+                    ? 'Speaking'
+                    : call.status === 'completed'
+                      ? formatOutcome(call.outcome)
+                      : 'Live simulation'}
                 </span>
               </div>
             </div>
