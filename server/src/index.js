@@ -15,7 +15,6 @@ import { SAMPLE_CONTACTS } from './seed/contacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || '4000', 10);
-const HOST = '0.0.0.0';
 
 function ensureSeed() {
   const trackCount = db.prepare('SELECT COUNT(*) AS c FROM tracks').get().c;
@@ -116,8 +115,8 @@ const isDirectRun =
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
 if (isDirectRun) {
-  app.listen(PORT, HOST, () => {
-    console.log(`Collecta listening on http://${HOST}:${PORT} (client: ${hasClientBuild ? 'yes' : 'no'})`);
+  app.listen(PORT, () => {
+    console.log(`Collecta listening on port ${PORT} (client: ${hasClientBuild ? 'yes' : 'no'})`);
   });
 }
 

@@ -1,7 +1,6 @@
 import http from 'node:http';
 
 const port = Number.parseInt(process.env.PORT || '8080', 10);
-const host = '0.0.0.0';
 
 console.log('[collecta] boot', {
   node: process.version,
@@ -23,8 +22,9 @@ let appHandler = (req, res) => {
 
 const server = http.createServer((req, res) => appHandler(req, res));
 
-server.listen(port, host, () => {
-  console.log(`[collecta] listening on http://${host}:${port}`);
+// Railway's proxy connects over IPv6. Binding only 0.0.0.0 makes the public URL return 503.
+server.listen(port, () => {
+  console.log('[collecta] listening', server.address());
 });
 
 process.on('uncaughtException', (err) => {
