@@ -20,12 +20,24 @@ let appHandler = (req, res) => {
   res.end('Collecta is still starting');
 };
 
-const server = http.createServer((req, res) => appHandler(req, res));
+function onRequest(req, res) {
+  appHandler(req, res);
+}
 
-// Railway's proxy connects over IPv6. Binding only 0.0.0.0 makes the public URL return 503.
-server.listen(port, () => {
-  console.log('[collecta] listening', server.address());
-});
+function listenOn(host, extra = {}) {
+  const server = http.createServer(onRequest);
+  server.on('error', (err) => {
+    console.error(`[collecta] listen ${host} failed`, err.code || err.message);
+  });
+  server.listen({ port, host, ...extra }, () => {
+    console.log('[collecta] listening', server.address());
+  });
+  return server;
+}
+
+// Railway's proxy may connect over IPv4 or IPv6. Bind both.
+listenOn('0.0.0.0');
+listenOn('::', { ipv6Only: true });
 
 process.on('uncaughtException', (err) => {
   console.error('[collecta] uncaughtException', err);
