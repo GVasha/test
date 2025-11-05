@@ -62,7 +62,7 @@ Agent lines can be read aloud via ElevenLabs TTS. The API key stays on the serve
 2. Restart the API (`npm run dev`).
 3. Open **Call Console** — with a valid key you will see **Auto-speak agent** and **Play** on agent bubbles.
 
-Optional: `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (defaults: Rachel + `eleven_turbo_v2_5`).
+Optional: `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (defaults: Sarah + `eleven_turbo_v2_5`). The free plan cannot use library voices through the API.
 
 **Security:** never commit `.env` or paste keys in chat. Rotate any key that was exposed.
 
