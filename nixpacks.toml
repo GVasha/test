@@ -1,0 +1,15 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+aptPkgs = ["libatomic1"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["npm run build:railway"]
+
+[variables]
+NPM_CONFIG_PRODUCTION = "false"
+
+[start]
+cmd = "npm start"

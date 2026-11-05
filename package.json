@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "Bank loan collection calling platform with simulated outbound calls",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
+    "postinstall": "npm install --prefix server --omit=dev && npm install --prefix client",
     "install:all": "npm install --prefix server && npm install --prefix client",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
     "seed": "npm run seed --prefix server",
     "build": "npm run build --prefix client",
+    "build:railway": "npm install --prefix client && npm run build --prefix client",
     "start": "npm start --prefix server"
   },
   "devDependencies": {

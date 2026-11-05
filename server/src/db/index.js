@@ -5,7 +5,18 @@ import { fileURLToPath } from 'url';
 import { SCHEMA_SQL } from './schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '../../data');
+
+function resolveDataDir() {
+  if (process.env.DATABASE_DIR?.trim()) {
+    return path.resolve(process.env.DATABASE_DIR.trim());
+  }
+  if (process.env.RAILWAY_VOLUME_MOUNT_PATH?.trim()) {
+    return path.resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH.trim());
+  }
+  return path.join(__dirname, '../../data');
+}
+
+const dataDir = resolveDataDir();
 const dbPath = path.join(dataDir, 'loan_collection.db');
 
 if (!fs.existsSync(dataDir)) {

@@ -65,3 +65,19 @@ Agent lines can be read aloud via ElevenLabs TTS. The API key stays on the serve
 Optional: `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID` (defaults: Rachel + `eleven_turbo_v2_5`).
 
 **Security:** never commit `.env` or paste keys in chat. Rotate any key that was exposed.
+
+## Deploy on Railway
+
+1. Create a **new project** → **Deploy from GitHub repo** (`GVasha/test`).
+2. Railway detects [railway.json](railway.json): builds the Vite client, starts the Express server on `PORT`.
+3. **Variables** (Railway → service → Variables):
+   - `ELEVENLABS_API_KEY` — optional, for agent voice
+   - `NODE_ENV=production` — recommended
+4. **Generate domain** (Settings → Networking → Public networking).
+5. Open the URL — UI and `/api/*` are served from the same service.
+
+**Node:** requires **22.5+** (`node:sqlite`). Nixpacks uses Node 22 via `.node-version`.
+
+**Database:** SQLite file is created on first boot with demo seed data. Railway’s disk is ephemeral unless you add a **Volume** (mount path e.g. `/data`) — then set `DATABASE_DIR=/data` so data survives redeploys.
+
+**Health check:** `GET /api/health`

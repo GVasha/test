@@ -1,6 +1,7 @@
 import './loadEnv.js';
 import cors from 'cors';
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './db/index.js';
@@ -13,7 +14,8 @@ import { TRACK_DEFINITIONS } from './seed/tracks.js';
 import { SAMPLE_CONTACTS } from './seed/contacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 4000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 function ensureSeed() {
   const trackCount = db.prepare('SELECT COUNT(*) AS c FROM tracks').get().c;
@@ -68,7 +70,11 @@ app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    node: process.version,
+    env: process.env.RAILWAY_ENVIRONMENT_NAME || process.env.NODE_ENV || 'development',
+  });
 });
 
 app.use('/api/contacts', contactsRouter);
@@ -78,12 +84,26 @@ app.use('/api/calls', callsRouter);
 app.use('/api/voice', voiceRouter);
 
 const clientDist = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
-    if (err) next();
+const clientIndex = path.join(clientDist, 'index.html');
+const hasClientBuild = fs.existsSync(clientIndex);
+
+if (hasClientBuild) {
+  app.use(express.static(clientDist, { index: false }));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(clientIndex, (err) => {
+      if (err) next(err);
+    });
   });
+} else {
+  console.warn(
+    `Client build not found at ${clientDist}. Run "npm run build" before production start.`
+  );
+}
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return next();
+  res.status(404).json({ error: 'Not found' });
 });
 
 app.use((err, _req, res, _next) => {
@@ -91,6 +111,6 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'Server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Loan collection API listening on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Collecta listening on http://${HOST}:${PORT} (client: ${hasClientBuild ? 'yes' : 'no'})`);
 });
