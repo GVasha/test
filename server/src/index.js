@@ -3,7 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import db from './db/index.js';
 import contactsRouter from './routes/contacts.js';
 import campaignsRouter from './routes/campaigns.js';
@@ -111,6 +111,14 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'Server error' });
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`Collecta listening on http://${HOST}:${PORT} (client: ${hasClientBuild ? 'yes' : 'no'})`);
-});
+const isDirectRun =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (isDirectRun) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Collecta listening on http://${HOST}:${PORT} (client: ${hasClientBuild ? 'yes' : 'no'})`);
+  });
+}
+
+export default app;

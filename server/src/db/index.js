@@ -13,6 +13,9 @@ function resolveDataDir() {
   if (process.env.RAILWAY_VOLUME_MOUNT_PATH?.trim()) {
     return path.resolve(process.env.RAILWAY_VOLUME_MOUNT_PATH.trim());
   }
+  if (process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_ENVIRONMENT) {
+    return '/tmp/collecta-data';
+  }
   return path.join(__dirname, '../../data');
 }
 
