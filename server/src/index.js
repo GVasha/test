@@ -14,8 +14,8 @@ import { TRACK_DEFINITIONS } from './seed/tracks.js';
 import { SAMPLE_CONTACTS } from './seed/contacts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT) || 4000;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = parseInt(process.env.PORT || '4000', 10);
+const HOST = '0.0.0.0';
 
 function ensureSeed() {
   const trackCount = db.prepare('SELECT COUNT(*) AS c FROM tracks').get().c;

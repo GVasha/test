@@ -12,4 +12,4 @@ cmds = ["npm run build:railway"]
 NPM_CONFIG_PRODUCTION = "false"
 
 [start]
-cmd = "npm start"
+cmd = "node --experimental-sqlite server/src/main.js"

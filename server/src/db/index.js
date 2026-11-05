@@ -16,14 +16,26 @@ function resolveDataDir() {
   return path.join(__dirname, '../../data');
 }
 
-const dataDir = resolveDataDir();
-const dbPath = path.join(dataDir, 'loan_collection.db');
+let dataDir = resolveDataDir();
+let dbPath = path.join(dataDir, 'loan_collection.db');
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+function tryInitDb(dir) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return new DatabaseSync(path.join(dir, 'loan_collection.db'));
 }
 
-const db = new DatabaseSync(dbPath);
+let db;
+try {
+  db = tryInitDb(dataDir);
+} catch (err) {
+  console.warn('[collecta] primary database path failed, using /tmp', err.message);
+  dataDir = '/tmp/collecta-data';
+  dbPath = path.join(dataDir, 'loan_collection.db');
+  db = tryInitDb(dataDir);
+}
+
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
 db.exec(SCHEMA_SQL);
